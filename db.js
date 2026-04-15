@@ -19,6 +19,7 @@ export async function connectDB() {
       )
     ]).catch((error) => {
       console.error("Failed to initialize processed_updates indexes:", error.message);
+      indexesInitializationPromise = undefined;
     });
   }
   await indexesInitializationPromise;

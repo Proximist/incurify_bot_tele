@@ -17,6 +17,7 @@ export default async function handler(req, res) {
 
     const isNewUpdate = await markUpdateProcessed(updateId);
     if (!isNewUpdate) {
+      console.info(`Skipping duplicate update: ${updateId}`);
       return res.status(200).send("OK");
     }
 
