@@ -32,7 +32,7 @@ export async function markUpdateProcessed(updateId) {
     { upsert: true }
   );
 
-  return result.upsertedCount === 1 || result.matchedCount === 0;
+  return result.upsertedCount === 1;
 }
 
 /* USER MANAGEMENT */

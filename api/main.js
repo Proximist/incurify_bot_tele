@@ -10,11 +10,14 @@ export default async function handler(req, res) {
     const update = req.body;
     const updateId = update?.update_id;
 
-    if (typeof updateId === "number") {
-      const isNewUpdate = await markUpdateProcessed(updateId);
-      if (!isNewUpdate) {
-        return res.status(200).send("OK");
-      }
+    if (typeof updateId !== "number") {
+      console.warn("Skipping update without valid update_id");
+      return res.status(200).send("OK");
+    }
+
+    const isNewUpdate = await markUpdateProcessed(updateId);
+    if (!isNewUpdate) {
+      return res.status(200).send("OK");
     }
 
     // Handle text messages
