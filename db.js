@@ -2,7 +2,7 @@ import { MongoClient } from "mongodb";
 
 const client = new MongoClient(process.env.MONGO_URI);
 let db;
-let indexesInitialized = false;
+let indexesInitializationPromise;
 
 export async function connectDB() {
   if (!db) {
@@ -10,14 +10,16 @@ export async function connectDB() {
     db = client.db("telegramBot");
   }
 
-  if (!indexesInitialized) {
-    await db.collection("processed_updates").createIndex({ updateId: 1 }, { unique: true });
-    await db.collection("processed_updates").createIndex(
-      { processedAt: 1 },
-      { expireAfterSeconds: 60 * 60 * 24 * 7 }
-    );
-    indexesInitialized = true;
+  if (!indexesInitializationPromise) {
+    indexesInitializationPromise = Promise.all([
+      db.collection("processed_updates").createIndex({ updateId: 1 }, { unique: true }),
+      db.collection("processed_updates").createIndex(
+        { processedAt: 1 },
+        { expireAfterSeconds: 60 * 60 * 24 * 7 }
+      )
+    ]);
   }
+  await indexesInitializationPromise;
 
   return db;
 }
@@ -30,7 +32,7 @@ export async function markUpdateProcessed(updateId) {
     { upsert: true }
   );
 
-  return result.upsertedCount === 1;
+  return result.upsertedCount === 1 || result.matchedCount === 0;
 }
 
 /* USER MANAGEMENT */
