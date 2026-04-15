@@ -2,13 +2,35 @@ import { MongoClient } from "mongodb";
 
 const client = new MongoClient(process.env.MONGO_URI);
 let db;
+let indexesInitialized = false;
 
 export async function connectDB() {
   if (!db) {
     await client.connect();
     db = client.db("telegramBot");
   }
+
+  if (!indexesInitialized) {
+    await db.collection("processed_updates").createIndex({ updateId: 1 }, { unique: true });
+    await db.collection("processed_updates").createIndex(
+      { processedAt: 1 },
+      { expireAfterSeconds: 60 * 60 * 24 * 7 }
+    );
+    indexesInitialized = true;
+  }
+
   return db;
+}
+
+export async function markUpdateProcessed(updateId) {
+  const database = await connectDB();
+  const result = await database.collection("processed_updates").updateOne(
+    { updateId },
+    { $setOnInsert: { updateId, processedAt: new Date() } },
+    { upsert: true }
+  );
+
+  return result.upsertedCount === 1;
 }
 
 /* USER MANAGEMENT */
