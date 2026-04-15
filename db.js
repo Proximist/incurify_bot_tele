@@ -17,7 +17,9 @@ export async function connectDB() {
         { processedAt: 1 },
         { expireAfterSeconds: 60 * 60 * 24 * 7 }
       )
-    ]);
+    ]).catch((error) => {
+      console.error("Failed to initialize processed_updates indexes:", error.message);
+    });
   }
   await indexesInitializationPromise;
 
