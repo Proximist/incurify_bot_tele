@@ -29,13 +29,20 @@ export async function connectDB() {
 
 export async function markUpdateProcessed(updateId) {
   const database = await connectDB();
-  const result = await database.collection("processed_updates").updateOne(
-    { updateId },
-    { $setOnInsert: { updateId, processedAt: new Date() } },
-    { upsert: true }
-  );
+  try {
+    const result = await database.collection("processed_updates").updateOne(
+      { updateId },
+      { $setOnInsert: { updateId, processedAt: new Date() } },
+      { upsert: true }
+    );
 
-  return result.upsertedCount === 1;
+    if (result.upsertedCount === 1) return true;
+    if (result.matchedCount > 0) return false;
+    return false;
+  } catch (error) {
+    if (error?.code === 11000) return false;
+    throw error;
+  }
 }
 
 /* USER MANAGEMENT */
