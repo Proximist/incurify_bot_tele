@@ -2,13 +2,47 @@ import { MongoClient } from "mongodb";
 
 const client = new MongoClient(process.env.MONGO_URI);
 let db;
+let indexesInitializationPromise;
 
 export async function connectDB() {
   if (!db) {
     await client.connect();
     db = client.db("telegramBot");
   }
+
+  if (!indexesInitializationPromise) {
+    indexesInitializationPromise = Promise.all([
+      db.collection("processed_updates").createIndex({ updateId: 1 }, { unique: true }),
+      db.collection("processed_updates").createIndex(
+        { processedAt: 1 },
+        { expireAfterSeconds: 60 * 60 * 24 * 7 }
+      )
+    ]).catch((error) => {
+      console.error("Failed to initialize processed_updates indexes:", error.message);
+      indexesInitializationPromise = undefined;
+    });
+  }
+  await indexesInitializationPromise;
+
   return db;
+}
+
+export async function markUpdateProcessed(updateId) {
+  const database = await connectDB();
+  try {
+    const result = await database.collection("processed_updates").updateOne(
+      { updateId },
+      { $setOnInsert: { updateId, processedAt: new Date() } },
+      { upsert: true }
+    );
+
+    if (result.upsertedCount === 1) return true;
+    if (result.matchedCount > 0) return false;
+    return false;
+  } catch (error) {
+    if (error?.code === 11000) return false;
+    throw error;
+  }
 }
 
 /* USER MANAGEMENT */

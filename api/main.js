@@ -1,4 +1,5 @@
 import { handleCommand, handleCallback } from "../commands.js";
+import { markUpdateProcessed } from "../db.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -7,6 +8,18 @@ export default async function handler(req, res) {
 
   try {
     const update = req.body;
+    const updateId = update?.update_id;
+
+    if (typeof updateId !== "number") {
+      console.warn("Skipping update without valid update_id");
+      return res.status(200).send("OK");
+    }
+
+    const isNewUpdate = await markUpdateProcessed(updateId);
+    if (!isNewUpdate) {
+      console.info(`Skipping duplicate update: ${updateId}`);
+      return res.status(200).send("OK");
+    }
 
     // Handle text messages
     if (update.message?.text) {
